@@ -21,3 +21,7 @@ class Todo:
         self.done = False
 
         Todo.objects.append(self)
+
+    def change_status(self) -> None:
+        """Checks the todo."""
+        self.done = not self.done

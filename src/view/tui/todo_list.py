@@ -3,6 +3,7 @@
 import time
 
 from src.model.todo_list import TodoList
+from src.view.tui.utils import check_choice, print_menu
 
 
 def add_todo_list() -> None:
@@ -24,24 +25,68 @@ def add_todo_list() -> None:
     TodoList(name)
 
 
-def list_todos() -> None:
+def list_todos(edit_mode: bool = False, todo_list_name: str = "") -> None:
     """Lists every todo by todo lists."""
-    todo_list_name = input("Name of todo list (default shows every): ").strip()
+    if todo_list_name == "":
+        todo_list_name = input("Name of todo list (default shows every): ").strip()
     if todo_list_name == "":
         todo_list_name = None
 
     print()
 
-    for t_list in TodoList.objects:
+    todos = {}
+    offset = 0
+    for list_idx, t_list in enumerate(TodoList.objects):
         if todo_list_name is not None and t_list.name != todo_list_name:
             continue
+        list_number = list_idx + offset + 1
+        print(f"* {f'{list_number}.' if edit_mode else ''} {t_list.name}:", end="")
+        todos[list_number] = {}
+        offset += list_idx + 1
+
         if len(t_list.todos) == 0:
+            print(" No todos\n")
             continue
-        print(f"* {t_list.name}:")
-        for todo in t_list.todos:
+
+        print()
+
+        for todo_idx, todo in enumerate(t_list.todos):
             msg = todo.message
             if todo.done:
-                msg = "\u0336".join(msg) + "\u0336"
-            print(f"\t- {msg}")
+                msg = "".join(["\u0336{}".format(c) for c in msg])
+            todo_number = offset + todo_idx + 1
+            print(f"\t- {f'{todo_number}.' if edit_mode else ''} {msg}")
+            todos[list_number][todo_number] = todo
+        offset += todo_idx
 
-    input("\nPress enter to continue...")
+    # TODO: Clean up/refactor edit mode!!!
+    if edit_mode:
+        print("\nPossibilities:")
+        menu_points = {
+            1: ("Swtich status", lambda todo: todo.change_status()),
+            "x": ("Cancel", list_todos),
+        }
+        print_menu(menu_points)
+        choice = input("\nInput ([list number] [todo number] [menu point]): ")
+        if choice == "x":
+            return menu_points[choice][1]
+        list_num, todo_num, choice = choice.split()
+        list_num, todo_num, choice = int(list_num), int(todo_num), int(choice)
+        menu_points[choice][1](todos[list_num][todo_num])
+        return lambda: list_todos(True, todo_list_name)
+
+    menu_points = {
+        1: ("Edit todo(s)", lambda: list_todos(True, todo_list_name)),
+        "x": ("Go back", ...),
+    }
+
+    print("\nWhat would you like to do?\n")
+    print_menu(menu_points)
+    choice = input("\nInput: ")
+
+    res = check_choice(choice, menu_points)
+    if not res:
+        return
+    choice = int(choice)
+
+    return menu_points[choice][1]

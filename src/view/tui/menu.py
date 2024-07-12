@@ -20,6 +20,8 @@ def is_int(value: any) -> bool:
 def list_todos() -> None:
     """Lists every todo by todo lists."""
     for t_list in TodoList.objects:
+        if len(t_list.todos) == 0:
+            continue
         print(f"* {t_list.name}:")
         for todo in t_list.todos:
             print(f"\t- {todo.message}")
